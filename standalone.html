@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Library Knowledge Challenge</title>
+    <style>
+/* Color Palette & Variables */
+:root {
+    --wood-dark: #3e2723;
+    --wood-light: #5d4037;
+    --parchment: #fdf5e6;
+    --parchment-dark: #e8d5b5;
+    --gold: #d4af37;
+    --gold-hover: #f1c40f;
+    --text-dark: #2c1e16;
+    --text-light: #fff;
+    --correct: #27ae60;
+    --wrong: #c0392b;
+    --selected: #2980b9;
+    --disabled: #95a5a6;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Georgia', serif;
+    background-color: var(--wood-dark);
+    color: var(--text-dark);
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Layout */
+.app-container {
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+}
+
+.screen {
+    display: none;
+    animation: fadeIn 0.4s ease-in;
+}
+
+.screen.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* UI Elements */
+.parchment-box {
+    background-color: var(--parchment);
+    border: 4px solid var(--gold);
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.5);
+    text-align: center;
+}
+
+h1, h2, h3 {
+    margin-bottom: 20px;
+    color: var(--wood-dark);
+}
+
+.rules-list {
+    text-align: left;
+    margin: 20px auto;
+    max-width: 400px;
+}
+
+button {
+    font-family: 'Georgia', serif;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+button:focus-visible {
+    outline: 3px solid var(--gold-hover);
+    outline-offset: 2px;
+}
+
+.btn-primary {
+    background-color: var(--wood-light);
+    color: var(--gold);
+    border: 2px solid var(--gold);
+    margin-top: 20px;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--gold);
+    color: var(--wood-dark);
+}
+
+.btn-danger {
+    background-color: #8e44ad;
+    color: white;
+    font-size: 0.9rem;
+    padding: 5px 10px;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #9b59b6;
+}
+
+/* Game Layout */
+.game-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+@media (min-width: 900px) {
+    .game-layout {
+        grid-template-columns: 3fr 1fr;
+    }
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    background: var(--wood-light);
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--gold);
+}
+
+.lifelines {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-lifeline {
+    background-color: var(--wood-dark);
+    color: var(--gold);
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    border: 1px solid var(--gold);
+}
+
+.btn-lifeline.used {
+    background-color: var(--wood-dark);
+    color: #7f8c8d;
+    border-color: #7f8c8d;
+    text-decoration: line-through;
+}
+
+.lifeline-display {
+    background: var(--parchment-dark);
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 5px solid var(--gold);
+    text-align: left;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Question & Options */
+.question-container h2 {
+    font-size: 1.5rem;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+@media (min-width: 600px) {
+    .options-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.btn-option {
+    background-color: var(--wood-light);
+    color: var(--parchment);
+    border: 2px solid var(--gold);
+    text-align: left;
+    display: flex;
+    align-items: center;
+    min-height: 60px;
+}
+
+.btn-option:hover:not(:disabled):not(.selected) {
+    background-color: var(--wood-dark);
+    border-color: var(--gold-hover);
+}
+
+.btn-option .opt-label {
+    color: var(--gold);
+    font-weight: bold;
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+/* Option States */
+.btn-option.selected {
+    background-color: var(--selected);
+    border-color: #fff;
+}
+
+.btn-option.correct {
+    background-color: var(--correct);
+    border-color: #fff;
+}
+
+.btn-option.correct::after {
+    content: " (Correct)";
+    font-size: 0.8rem;
+    margin-left: auto;
+}
+
+.btn-option.wrong {
+    background-color: var(--wrong);
+    border-color: #fff;
+}
+
+.btn-option.wrong::after {
+    content: " (Incorrect)";
+    font-size: 0.8rem;
+    margin-left: auto;
+}
+
+.btn-option.eliminated {
+    opacity: 0.2;
+    background-color: transparent;
+    border-color: var(--disabled);
+    cursor: not-allowed;
+}
+
+/* Ladder */
+.ladder-area h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+#prize-ladder {
+    list-style: none;
+    display: flex;
+    flex-direction: column-reverse; /* Bottom to top */
+    gap: 5px;
+}
+
+.ladder-step {
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    color: var(--wood-light);
+}
+
+.ladder-step.checkpoint {
+    color: var(--text-dark);
+    border: 1px solid var(--wood-light);
+}
+
+.ladder-step.active {
+    background-color: var(--gold);
+    color: var(--wood-dark);
+}
+
+.ladder-step.secured {
+    background-color: var(--wood-light);
+    color: var(--gold);
+}
+
+/* Explanations */
+.explanation-box {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: var(--parchment-dark);
+    font-size: 1.1rem;
+    text-align: left;
+}
+
+/* Accessibility - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    .screen {
+        animation: none;
+    }
+}
+    </style>
+</head>
+<body>
+    <!-- Accessibility Live Region -->
+    <div id="live-announcer" class="sr-only" aria-live="polite"></div>
+
+    <div class="app-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <div class="parchment-box">
+                <h1>The Library Knowledge Challenge</h1>
+                <p>Welcome, reader! Test your knowledge of literature, library sciences, and research to reach the top of the bookshelf and win 1,000,000 points.</p>
+                <ul class="rules-list">
+                    <li>15 Questions, progressively harder.</li>
+                    <li>Guaranteed score checkpoints at Question 5 and 10.</li>
+                    <li>Three lifelines: 50:50, Ask the Readers, and Ask the Librarian.</li>
+                </ul>
+                <button id="btn-start" class="btn-primary">Start Game</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-layout">
+                
+                <div class="main-play-area">
+                    <div class="top-bar">
+                        <div class="lifelines">
+                            <button id="ll-5050" class="btn-lifeline" aria-label="Use 50:50 lifeline">50:50</button>
+                            <button id="ll-readers" class="btn-lifeline" aria-label="Use Ask the Readers lifeline">Ask Readers</button>
+                            <button id="ll-librarian" class="btn-lifeline" aria-label="Use Ask the Librarian lifeline">Ask Librarian</button>
+                        </div>
+                        <button id="btn-walk" class="btn-danger">Walk Away</button>
+                    </div>
+
+                    <div id="lifeline-display" class="lifeline-display hidden"></div>
+
+                    <div class="question-container parchment-box">
+                        <h2 id="question-text">Question goes here?</h2>
+                        <div class="options-grid">
+                            <button class="btn-option" data-index="0"><span class="opt-label">A:</span> <span class="opt-text">Option 1</span></button>
+                            <button class="btn-option" data-index="1"><span class="opt-label">B:</span> <span class="opt-text">Option 2</span></button>
+                            <button class="btn-option" data-index="2"><span class="opt-label">C:</span> <span class="opt-text">Option 3</span></button>
+                            <button class="btn-option" data-index="3"><span class="opt-label">D:</span> <span class="opt-text">Option 4</span></button>
+                        </div>
+                    </div>
+
+                    <div class="controls-area">
+                        <button id="btn-confirm" class="btn-primary" disabled>Confirm Answer</button>
+                        <button id="btn-next" class="btn-primary hidden">Next Question</button>
+                    </div>
+
+                    <div id="explanation-box" class="explanation-box hidden parchment-box">
+                        <p id="explanation-text"></p>
+                    </div>
+                </div>
+
+                <div class="ladder-area parchment-box">
+                    <h3>Prize Ladder</h3>
+                    <ul id="prize-ladder">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <div class="parchment-box">
+                <h1 id="results-title">Game Over</h1>
+                <p id="results-message"></p>
+                <h2>Score: <span id="final-score">0</span> points</h2>
+                <p>Best Score: <span id="best-score">0</span> points</p>
+                <button id="btn-restart" class="btn-primary">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// --- PRIZE LADDER ---
+const prizes = [
+    100, 200, 300, 500, 1000, 
+    2000, 4000, 8000, 16000, 32000, 
+    64000, 125000, 250000, 500000, 1000000
+];
+const CHECKPOINTS = [4, 9]; // Indexes for Question 5 and 10 (0-based)
+
+// --- QUESTION BANK ---
+const easyQuestions = [
+    { q: "What system is most commonly used in public libraries to classify non-fiction books?", opts: ["Dewey Decimal", "Library of Congress", "ISBN", "Alphabetical"], ans: 0, hint: "Melvil created this numbered system in 1876.", exp: "The Dewey Decimal Classification uses numbers from 000 to 999 to organize knowledge." },
+    { q: "What does the acronym ISBN stand for?", opts: ["Internal Standard Book Number", "International Standard Book Number", "Index of Serial Book Names", "Information System for Book Networking"], ans: 1, hint: "It is a global standard.", exp: "ISBN is a unique 10 or 13-digit numeric commercial book identifier." },
+    { q: "Where would you find definitions and pronunciations of words?", opts: ["Atlas", "Encyclopedia", "Dictionary", "Thesaurus"], ans: 2, hint: "Merriam-Webster publishes a famous one.", exp: "A dictionary provides definitions, spellings, and pronunciations." },
+    { q: "Who wrote the play 'Romeo and Juliet'?", opts: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"], ans: 1, hint: "The Bard of Avon.", exp: "Shakespeare wrote this famous tragedy early in his career." },
+    { q: "What is a 'periodical' in a library context?", opts: ["A book checked out for a period of time", "A publication issued at regular intervals", "A fine for late returns", "A desk for reference questions"], ans: 1, hint: "Magazines and journals are examples.", exp: "Periodicals are published in regular intervals (e.g., daily, monthly)." },
+    { q: "Which section contains books consisting of imaginary events and people?", opts: ["Non-fiction", "Reference", "Fiction", "Biography"], ans: 2, hint: "The opposite of fact.", exp: "Fiction books describe imaginary events and people." },
+    { q: "What is an online library catalog usually called?", opts: ["OPAC", "MARC", "HTTP", "HTML"], ans: 0, hint: "Online Public Access Catalog.", exp: "OPAC stands for Online Public Access Catalog." },
+    { q: "Which of these is a primary source?", opts: ["A textbook", "A biography", "A diary entry", "A book review"], ans: 2, hint: "First-hand evidence.", exp: "A diary entry is a primary source as it is an original document." },
+    { q: "What do you call a list of sources used in a research paper?", opts: ["Glossary", "Index", "Bibliography", "Appendix"], ans: 2, hint: "Often found at the end of a book.", exp: "A bibliography lists the books and sources used." },
+    { q: "Which genre involves solving a crime?", opts: ["Romance", "Mystery", "Sci-Fi", "Fantasy"], ans: 1, hint: "Agatha Christie wrote many of these.", exp: "Mystery novels revolve around the solution of a crime or puzzle." }
+];
+
+const mediumQuestions = [
+    { q: "Which classification system is primarily used in academic and research libraries in the US?", opts: ["Dewey Decimal System", "Library of Congress Classification", "Universal Decimal Classification", "Colon Classification"], ans: 1, hint: "It uses a combination of letters and numbers, named after a federal institution.", exp: "The LCC is widely used by academic and research libraries." },
+    { q: "What does the Boolean operator 'AND' do in a database search?", opts: ["Expands the search", "Narrows the search", "Excludes a term", "Sorts the results"], ans: 1, hint: "It requires both terms to be present.", exp: "'AND' narrows a search by ensuring all linked terms are in the results." },
+    { q: "What is a 'Call Number'?", opts: ["The library's phone number", "The unique code identifying a book's location on the shelf", "The barcode on the back of the book", "The ISBN"], ans: 1, hint: "It acts like the book's address.", exp: "A call number tells you exactly where the book lives on the library shelves." },
+    { q: "In information literacy, what does the CRAAP test evaluate?", opts: ["Reading speed", "Source credibility and reliability", "Library fine calculations", "Catalog loading times"], ans: 1, hint: "Currency, Relevance, Authority, Accuracy, Purpose.", exp: "The CRAAP test is a widely used method to evaluate the reliability of sources." },
+    { q: "What is 'Interlibrary Loan' (ILL)?", opts: ["Borrowing money for library cards", "A service to borrow materials from other libraries", "Lending books to friends", "Renting study rooms"], ans: 1, hint: "Libraries helping libraries.", exp: "ILL allows patrons of one library to borrow materials owned by another." },
+    { q: "Which of these is considered a secondary source?", opts: ["A photograph", "An interview transcript", "A historical monograph analyzing an event", "Raw census data"], ans: 2, hint: "It interprets or analyzes original information.", exp: "A monograph analyzes and interprets primary sources, making it secondary." },
+    { q: "What does 'peer-reviewed' mean regarding a journal article?", opts: ["It is popular among students", "It has been evaluated by experts in the field before publication", "It is free to access", "It was written collaboratively by peers"], ans: 1, hint: "Subject to scrutiny by other scholars.", exp: "Peer-reviewed articles are vetted by experts to ensure quality and validity." },
+    { q: "Who wrote '1984'?", opts: ["Aldous Huxley", "George Orwell", "Ray Bradbury", "Margaret Atwood"], ans: 1, hint: "He also wrote Animal Farm.", exp: "George Orwell wrote the dystopian novel 1984, published in 1949." },
+    { q: "What is a glossary?", opts: ["An alphabetical list of terms and definitions found at the back of a book", "A map collection", "An index of authors", "A preface to a book"], ans: 0, hint: "A mini-dictionary for a specific book.", exp: "A glossary provides definitions for specific, often technical, terms used in the text." },
+    { q: "What is the purpose of a citation?", opts: ["To make a paper longer", "To avoid plagiarism and allow readers to locate sources", "To summarize a book", "To organize library shelves"], ans: 1, hint: "Giving credit where it is due.", exp: "Citations attribute ideas to their original authors and provide a trail for verification." }
+];
+
+const hardQuestions = [
+    { q: "What is the Dublin Core?", opts: ["A famous Irish manuscript", "A set of metadata elements for describing digital resources", "The central server of the Library of Congress", "A preservation technique for old books"], ans: 1, hint: "It's a standard used by catalogers for digital items.", exp: "The Dublin Core is a small set of vocabulary terms used to describe web resources (video, images, web pages, etc.)." },
+    { q: "In the Dewey Decimal System, what main class represents Literature?", opts: ["400", "700", "800", "900"], ans: 2, hint: "It is between Arts/Recreation and History/Geography.", exp: "The 800s class in DDC is dedicated to Literature and rhetoric." },
+    { q: "What does 'Open Access' mean in academic publishing?", opts: ["The library is open 24/7", "Research outputs are distributed online, free of cost or other access barriers", "Anyone can edit the articles", "Books are not kept behind glass"], ans: 1, hint: "No paywalls.", exp: "Open Access refers to free, unrestricted online access to research outputs." },
+    { q: "What is an 'incunabulum'?", opts: ["A book printed in Europe before the year 1501", "A type of bookbinding glue", "A magical spell found in fantasy literature", "A digital archive format"], ans: 0, hint: "From the Latin for 'swaddling clothes' or 'cradle'.", exp: "Incunabula are books printed using movable type prior to 1501, during the 'infancy' of printing." },
+    { q: "Which Boolean search string will yield the MOST results?", opts: ["Cats AND Dogs", "Cats OR Dogs", "Cats NOT Dogs", "Cats AND Dogs AND Birds"], ans: 1, hint: "Which operator expands the net?", exp: "'OR' broadens a search to include any records containing either term." },
+    { q: "What does a DOI (Digital Object Identifier) do?", opts: ["Identifies a patron digitally", "Provides a persistent link to a published digital object", "Translates books into digital formats", "Blocks malware on library computers"], ans: 1, hint: "It is a permanent URL for academic articles.", exp: "A DOI provides a permanent, stable link to an electronic document, unlike a standard URL which might break." },
+    { q: "What does 'controlled vocabulary' mean in database searching?", opts: ["Limiting searches to English only", "A standardized set of terms used to organize and retrieve information", "Censorship of sensitive topics", "Voice-activated catalog searching"], ans: 1, hint: "Subject headings are an example.", exp: "Controlled vocabularies (like MeSH or LCSH) ensure consistency in how topics are tagged and searched." },
+    { q: "What is a 'folio'?", opts: ["A book with pages folded once, making it very large", "A collection of poems", "A library card index", "A small pocketbook"], ans: 0, hint: "Shakespeare's first collected edition was called the First...?", exp: "A folio is a large book size where the printed sheet is folded in half once, creating two leaves." },
+    { q: "Who is the patron saint of libraries and archivists?", opts: ["Saint Thomas Aquinas", "Saint Jerome", "Saint Lawrence", "Saint Augustine"], ans: 1, hint: "He translated the Bible into Latin (the Vulgate).", exp: "St. Jerome is the patron saint of librarians, archivists, and translators." },
+    { q: "What does the MARC in MARC record stand for?", opts: ["Machine-Readable Cataloging", "Multiple Access Reference Code", "Main Article Resource Center", "Manual Archive Reading Class"], ans: 0, hint: "It allows computers to read catalog data.", exp: "MARC standards represent the structure by which computers exchange, use, and interpret bibliographic information." }
+];
+
+// --- GAME STATE ---
+let currentGameQuestions = [];
+let currentQuestionIndex = 0;
+let score = 0;
+let securedScore = 0;
+let gameState = 'start'; // start, active, answered, gameover
+let selectedOption = null;
+
+let lifelines = {
+    '5050': true,
+    'readers': true,
+    'librarian': true
+};
+
+// --- DOM ELEMENTS ---
+const screens = {
+    start: document.getElementById('start-screen'),
+    game: document.getElementById('game-screen'),
+    results: document.getElementById('results-screen')
+};
+
+const qText = document.getElementById('question-text');
+const optionsBtns = document.querySelectorAll('.btn-option');
+const btnConfirm = document.getElementById('btn-confirm');
+const btnNext = document.getElementById('btn-next');
+const btnWalk = document.getElementById('btn-walk');
+const prizeLadder = document.getElementById('prize-ladder');
+const expBox = document.getElementById('explanation-box');
+const expText = document.getElementById('explanation-text');
+const lifelineDisplay = document.getElementById('lifeline-display');
+const announcer = document.getElementById('live-announcer');
+
+const btnStart = document.getElementById('btn-start');
+const btnRestart = document.getElementById('btn-restart');
+const llBtns = {
+    '5050': document.getElementById('ll-5050'),
+    'readers': document.getElementById('ll-readers'),
+    'librarian': document.getElementById('ll-librarian')
+};
+
+// --- INIT & UTILS ---
+function shuffleArray(array) {
+    let arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function announce(msg) {
+    announcer.textContent = msg;
+}
+
+function switchScreen(screenName) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[screenName].classList.add('active');
+}
+
+// --- GAME LOGIC ---
+function startGame() {
+    // Select questions: 5 Easy, 5 Med, 5 Hard
+    const easy = shuffleArray(easyQuestions).slice(0, 5);
+    const med = shuffleArray(mediumQuestions).slice(0, 5);
+    const hard = shuffleArray(hardQuestions).slice(0, 5);
+    currentGameQuestions = [...easy, ...med, ...hard];
+
+    currentQuestionIndex = 0;
+    score = 0;
+    securedScore = 0;
+    lifelines = { '5050': true, 'readers': true, 'librarian': true };
+
+    Object.keys(llBtns).forEach(k => {
+        llBtns[k].classList.remove('used');
+        llBtns[k].disabled = false;
+    });
+
+    buildLadder();
+    switchScreen('game');
+    loadQuestion();
+}
+
+function buildLadder() {
+    prizeLadder.innerHTML = '';
+    prizes.forEach((prize, index) => {
+        const li = document.createElement('li');
+        li.classList.add('ladder-step');
+        if (CHECKPOINTS.includes(index)) {
+            li.classList.add('checkpoint');
+        }
+        
+        const numSpan = document.createElement('span');
+        numSpan.textContent = index + 1;
+        const prizeSpan = document.createElement('span');
+        prizeSpan.textContent = prize.toLocaleString();
+        
+        li.appendChild(numSpan);
+        li.appendChild(prizeSpan);
+        li.id = `ladder-${index}`;
+        prizeLadder.appendChild(li);
+    });
+}
+
+function updateLadder() {
+    document.querySelectorAll('.ladder-step').forEach((el, index) => {
+        el.classList.remove('active', 'secured');
+        if (index === currentQuestionIndex) {
+            el.classList.add('active');
+        } else if (index < currentQuestionIndex) {
+            el.classList.add('secured');
+        }
+    });
+}
+
+function loadQuestion() {
+    gameState = 'active';
+    selectedOption = null;
+    const q = currentGameQuestions[currentQuestionIndex];
+    
+    qText.textContent = `Q${currentQuestionIndex + 1}: ${q.q}`;
+    announce(`Question ${currentQuestionIndex + 1}: ${q.q}`);
+    
+    optionsBtns.forEach((btn, i) => {
+        btn.querySelector('.opt-text').textContent = q.opts[i];
+        btn.classList.remove('selected', 'correct', 'wrong', 'eliminated');
+        btn.disabled = false;
+    });
+
+    btnConfirm.disabled = true;
+    btnConfirm.classList.remove('hidden');
+    btnNext.classList.add('hidden');
+    expBox.classList.add('hidden');
+    lifelineDisplay.classList.add('hidden');
+    
+    // Enable unused lifelines
+    Object.keys(lifelines).forEach(k => {
+        if (lifelines[k]) llBtns[k].disabled = false;
+    });
+
+    updateLadder();
+}
+
+function selectOption(index) {
+    if (gameState !== 'active') return;
+    const btn = optionsBtns[index];
+    if (btn.disabled || btn.classList.contains('eliminated')) return;
+
+    optionsBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedOption = index;
+    btnConfirm.disabled = false;
+    announce(`Selected option ${['A', 'B', 'C', 'D'][index]}`);
+}
+
+function confirmAnswer() {
+    if (selectedOption === null || gameState !== 'active') return;
+    gameState = 'answered';
+    btnConfirm.disabled = true;
+    
+    // Disable lifelines
+    Object.keys(llBtns).forEach(k => llBtns[k].disabled = true);
+
+    const q = currentGameQuestions[currentQuestionIndex];
+    const isCorrect = selectedOption === q.ans;
+    
+    optionsBtns[q.ans].classList.add('correct');
+    
+    if (isCorrect) {
+        score = prizes[currentQuestionIndex];
+        if (CHECKPOINTS.includes(currentQuestionIndex)) {
+            securedScore = score;
+        }
+        announce(`Correct! You won ${score} points.`);
+        expBox.classList.remove('hidden');
+        expText.textContent = q.exp;
+        
+        btnConfirm.classList.add('hidden');
+        btnNext.classList.remove('hidden');
+        
+        if (currentQuestionIndex === 14) {
+            setTimeout(() => endGame(true), 3000);
+        }
+    } else {
+        optionsBtns[selectedOption].classList.add('wrong');
+        announce(`Incorrect. The correct answer was ${['A','B','C','D'][q.ans]}. Game over.`);
+        expBox.classList.remove('hidden');
+        expText.textContent = q.exp;
+        setTimeout(() => endGame(false), 4000);
+    }
+}
+
+function nextQuestion() {
+    if (currentQuestionIndex < 14) {
+        currentQuestionIndex++;
+        loadQuestion();
+    }
+}
+
+function walkAway() {
+    if (gameState !== 'active') return;
+    if (confirm(`Are you sure you want to walk away with ${score} points?`)) {
+        endGame('walk');
+    }
+}
+
+function endGame(outcome) {
+    let finalScore = 0;
+    let msg = "";
+    const title = document.getElementById('results-title');
+
+    if (outcome === true) {
+        finalScore = prizes[14];
+        title.textContent = "Victory!";
+        msg = "Congratulations! You have mastered the library and reached the top of the bookshelf!";
+    } else if (outcome === 'walk') {
+        finalScore = score;
+        title.textContent = "Walked Away";
+        msg = "A wise choice. You walked away with your earned points.";
+    } else {
+        finalScore = securedScore;
+        title.textContent = "Game Over";
+        msg = "You answered incorrectly. You leave with your guaranteed checkpoint score.";
+    }
+
+    document.getElementById('results-message').textContent = msg;
+    document.getElementById('final-score').textContent = finalScore.toLocaleString();
+    
+    // LocalStorage
+    try {
+        let best = localStorage.getItem('libraryBestScore') || 0;
+        if (finalScore > best) {
+            best = finalScore;
+            localStorage.setItem('libraryBestScore', best);
+        }
+        document.getElementById('best-score').textContent = parseInt(best).toLocaleString();
+    } catch (e) {
+        document.getElementById('best-score').textContent = "Not saved (local storage blocked)";
+    }
+
+    switchScreen('results');
+    announce(`${title.textContent}. ${msg} Final score: ${finalScore}`);
+}
+
+// --- LIFELINES ---
+function use5050() {
+    if (!lifelines['5050'] || gameState !== 'active') return;
+    lifelines['5050'] = false;
+    llBtns['5050'].classList.add('used');
+    llBtns['5050'].disabled = true;
+
+    const q = currentGameQuestions[currentQuestionIndex];
+    let incorrects = [0, 1, 2, 3].filter(i => i !== q.ans);
+    incorrects = shuffleArray(incorrects);
+    
+    const toRemove = [incorrects[0], incorrects[1]];
+    toRemove.forEach(i => {
+        optionsBtns[i].classList.add('eliminated');
+        optionsBtns[i].disabled = true;
+        if (selectedOption === i) {
+            selectedOption = null;
+            optionsBtns[i].classList.remove('selected');
+            btnConfirm.disabled = true;
+        }
+    });
+    announce("50:50 used. Two incorrect options removed.");
+}
+
+function useReaders() {
+    if (!lifelines['readers'] || gameState !== 'active') return;
+    lifelines['readers'] = false;
+    llBtns['readers'].classList.add('used');
+    llBtns['readers'].disabled = true;
+
+    const q = currentGameQuestions[currentQuestionIndex];
+    let available = [];
+    optionsBtns.forEach((btn, i) => {
+        if (!btn.classList.contains('eliminated')) available.push(i);
+    });
+
+    let percentages = {};
+    if (available.length === 4) {
+        // Correct gets 40-70%
+        let corrPct = Math.floor(Math.random() * 31) + 40;
+        let remaining = 100 - corrPct;
+        percentages[q.ans] = corrPct;
+        let inc = available.filter(i => i !== q.ans);
+        inc.forEach((idx, num) => {
+            if (num === inc.length - 1) {
+                percentages[idx] = remaining;
+            } else {
+                let p = Math.floor(Math.random() * remaining);
+                percentages[idx] = p;
+                remaining -= p;
+            }
+        });
+    } else {
+        // 50:50 used (2 left)
+        let corrPct = Math.floor(Math.random() * 31) + 50; // 50-80%
+        percentages[q.ans] = corrPct;
+        let other = available.find(i => i !== q.ans);
+        percentages[other] = 100 - corrPct;
+        
+        [0,1,2,3].forEach(i => {
+            if (!available.includes(i)) percentages[i] = 0;
+        });
+    }
+
+    lifelineDisplay.innerHTML = `<strong>Audience Poll:</strong><br>A: ${percentages[0]}% | B: ${percentages[1]}% | C: ${percentages[2]}% | D: ${percentages[3]}%`;
+    lifelineDisplay.classList.remove('hidden');
+    announce("Ask the Readers used. Results displayed.");
+}
+
+function useLibrarian() {
+    if (!lifelines['librarian'] || gameState !== 'active') return;
+    lifelines['librarian'] = false;
+    llBtns['librarian'].classList.add('used');
+    llBtns['librarian'].disabled = true;
+
+    const q = currentGameQuestions[currentQuestionIndex];
+    lifelineDisplay.innerHTML = `<strong>Librarian's Hint:</strong> ${q.hint}`;
+    lifelineDisplay.classList.remove('hidden');
+    announce(`Ask the Librarian used. Hint: ${q.hint}`);
+}
+
+// --- EVENT LISTENERS ---
+btnStart.addEventListener('click', startGame);
+btnRestart.addEventListener('click', startGame);
+btnConfirm.addEventListener('click', confirmAnswer);
+btnNext.addEventListener('click', nextQuestion);
+btnWalk.addEventListener('click', walkAway);
+
+optionsBtns.forEach(btn => {
+    btn.addEventListener('click', () => selectOption(parseInt(btn.getAttribute('data-index'))));
+});
+
+llBtns['5050'].addEventListener('click', use5050);
+llBtns['readers'].addEventListener('click', useReaders);
+llBtns['librarian'].addEventListener('click', useLibrarian);
+
+// Keyboard controls
+document.addEventListener('keydown', (e) => {
+    if (gameState !== 'active' || !screens.game.classList.contains('active')) return;
+
+    const keyMap = {
+        'a': 0, '1': 0,
+        'b': 1, '2': 1,
+        'c': 2, '3': 2,
+        'd': 3, '4': 3
+    };
+
+    const key = e.key.toLowerCase();
+    if (key in keyMap) {
+        selectOption(keyMap[key]);
+    } else if (key === 'enter' && selectedOption !== null && !btnConfirm.disabled) {
+        confirmAnswer();
+    }
+});
+    </script>
+</body>
+</html>
